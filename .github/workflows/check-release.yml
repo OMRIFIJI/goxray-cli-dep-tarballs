@@ -57,14 +57,14 @@ jobs:
       - name: Create tarball
         run: |
           cd tun
-          XZ_OPT='-T0 -9' tar -acf goxray-cli-deps-${{ needs.check-release.outputs.release_tag }}.tar.xz go-mod
+          XZ_OPT='-T0 -9' tar -acf goxray-cli-deps.tar.xz go-mod
 
       - name: Upload tarball as a release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ needs.check-release.outputs.release_tag }}
           files: |
-            tun/goxray-cli-deps-${{ needs.check-release.outputs.release_tag }}.tar.xz
+            tun/goxray-cli-deps.tar.xz
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
