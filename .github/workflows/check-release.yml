@@ -65,7 +65,7 @@ jobs:
           tag_name: ${{ needs.check-release.outputs.release_tag }}
           files: |
             tun/goxray-cli-deps.tar.xz
-          generate_release_notes: true
+          generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
