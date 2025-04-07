@@ -40,6 +40,8 @@ jobs:
     needs: check-release
     if: needs.check-release.outputs.is_new_release == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout goxray/tun
         run: |
