@@ -1,0 +1,81 @@
+name: Build and Release Dependency Tarball
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Запуск каждый день в 00:00 UTC
+  workflow_dispatch:     # Ручной запуск
+
+jobs:
+  check-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.get-release.outputs.latest_release }}
+      is_new_release: ${{ steps.check-new-release.outputs.is_new }}
+    steps:
+      - name: Fetch latest release
+        id: get-release
+        run: |
+          LATEST_RELEASE=$(curl -s https://api.github.com/repos/goxray/tun/releases/latest | jq -r .tag_name)
+          echo "latest_release=$LATEST_RELEASE" >> $GITHUB_OUTPUT
+          echo "Последний релиз: $LATEST_RELEASE"
+
+      - name: Compare with previous release
+        id: check-new-release
+        run: |
+          if [ -f last_release.txt ]; then
+            LAST_RELEASE=$(cat last_release.txt)
+          else
+            LAST_RELEASE=""
+          fi
+
+          if [ "${{ steps.get-release.outputs.latest_release }}" != "$LAST_RELEASE" ]; then
+            echo "Обнаружен новый релиз: ${{ steps.get-release.outputs.latest_release }}"
+            echo "${{ steps.get-release.outputs.latest_release }}" > last_release.txt
+            echo "is_new=true" >> $GITHUB_OUTPUT
+          else
+            echo "Новых релизов нет"
+            echo "is_new=false" >> $GITHUB_OUTPUT
+          fi
+
+  build-and-release:
+    needs: check-release
+    if: needs.check-release.outputs.is_new_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout goxray/tun
+        run: |
+          git clone https://github.com/goxray/tun.git
+          cd tun
+          git checkout ${{ needs.check-release.outputs.release_tag }}
+
+      - name: Download Go dependencies
+        run: |
+          cd tun
+          GOMODCACHE="${PWD}"/go-mod go mod download -modcacherw
+
+      - name: Create tarball
+        run: |
+          cd tun
+          XZ_OPT='-T0 -9' tar -acf goxray-cli-deps-${{ needs.check-release.outputs.release_tag }}.tar.xz go-mod
+
+      - name: Upload tarball as a release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.check-release.outputs.release_tag }}
+          files: |
+            tun/goxray-cli-deps-${{ needs.check-release.outputs.release_tag }}.tar.xz
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Send Telegram notification (опционально)
+        if: success()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          MESSAGE="🎉 Новый релиз goxray/tun: ${{ needs.check-release.outputs.release_tag }}! 📦 Tarball добавлен в релиз: https://github.com/OMEIFIJI/goxray-cli-dep-tarballs/releases/tag/${{ needs.check-release.outputs.release_tag }}"
+          curl -s -X POST \
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=${MESSAGE}" \
+            -d "parse_mode=Markdown"
