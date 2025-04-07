@@ -75,7 +75,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          MESSAGE="🎉 Новый релиз goxray/tun: ${{ needs.check-release.outputs.release_tag }}! 📦 Tarball добавлен в релиз: https://github.com/OMEIFIJI/goxray-cli-dep-tarballs/releases/tag/${{ needs.check-release.outputs.release_tag }}"
+          MESSAGE="🎉 Новый релиз goxray/tun: ${{ needs.check-release.outputs.release_tag }}! 📦 Tarball добавлен в релиз: https://github.com/OMRIFIJI/goxray-cli-dep-tarballs/releases/tag/${{ needs.check-release.outputs.release_tag }}"
           curl -s -X POST \
             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${TELEGRAM_CHAT_ID}" \
